@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  DBUsername:
+    Type: String
+Resources:
+  RDSDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: database01
+      AllocatedStorage: 10
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      MasterUsername:
+        Fn::Sub: '{{resolve:secretsmanager:${SecretManager}:SecretString:username}}'
+      MasterUserPassword:
+        Fn::Sub: '{{resolve:secretsmanager:${SecretManager}:SecretString:password}}'
+  SecretManager:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: dbcredentials
+      GenerateSecretString:
+        SecretStringTemplate:
+          Fn::Sub: '{"username": "${DBUsername}"}'
+        GenerateStringKey: password
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
+  LambdaLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: mysql-layer
+      Description: Lambda Layer for mysql dependencies
+      ContentUri: s3://code-bucket-sam-ap-south-1-123456/mysql-layer.zip
+      CompatibleRuntimes:
+      - python3.10
+      - python3.11
+      - python3.12
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      CodeUri: s3://code-bucket-sam-ap-south-1-123456/12967feb1ff9c1f760a868bdf6b13d30
+      Description: A starter AWS Lambda function.
+      MemorySize: 128
+      Timeout: 3
+      Layers:
+      - Ref: LambdaLayer
+      Policies:
+      - AWSSecretsManagerGetSecretValuePolicy:
+          SecretArn:
+            Ref: SecretManager
+      Environment:
+        Variables:
+          REGION_NAME:
+            Ref: AWS::Region
+      Events:
+        SAMAPI:
+          Type: Api
+          Properties:
+            Path: /details
+            Method: GET
+Outputs:
+  SecretARN:
+    Value:
+      Ref: SecretManager
