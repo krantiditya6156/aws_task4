@@ -1,66 +1,67 @@
 import json
-import mysql.connector
+import os
+
 import boto3
+import mysql.connector
 from botocore.exceptions import ClientError
+
+DBNAME = os.environ["DBNAME"]
+ENDPOINT = os.environ["ENDPOINT"]
+REGION_NAME = os.environ["REGION_NAME"]
+SECRET_NAME = os.environ["SECRET_NAME"]
 
 
 def get_secret():
 
-    secret_name = "dbcredentials"
-    region_name = "ap-south-1"
-
-    # Create a Secrets Manager client
     session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
+    client = session.client(service_name="secretsmanager", region_name=REGION_NAME)
 
     try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
+        get_secret_value_response = client.get_secret_value(SecretId=SECRET_NAME)
     except ClientError as e:
-        # For a list of exceptions thrown, see
-        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
         raise e
 
-    secret = get_secret_value_response['SecretString']
-
+    secret = get_secret_value_response["SecretString"]
+    secret = json.loads(secret)
     return secret
-
-
 
 
 def lambda_handler(event, context):
 
+    print("event: ", event)
+
+    headers = event["headers"]
+    customer_id = headers["customer_id"]
+
     secret = get_secret()
-    secret = json.loads(secret)
-    username = secret['username']
-    password = secret['password']
 
     try:
         db = mysql.connector.connect(
-            host="appstack-rdsdatabase-ru7myf9ohbne.cn6iyk20m27q.ap-south-1.rds.amazonaws.com",
-            user=username,
-            password=password,
-            database="database01"
-
+            host=ENDPOINT,
+            user=secret["username"],
+            password=secret["password"],
+            database=DBNAME,
         )
 
         if db.is_connected():
             print("Connected to the database successfully!")
+            query = f"""select count(*), sum(amount) 
+                    from database01.Transaction 
+                    where account_id in (select account_id 
+                                        from database01.Account
+                                        where customer_id={customer_id})"""
+
+            cursor = db.cursor()
+            cursor.execute(query)
+            result = cursor.fetchall()
+
+            db.close()
+
+            return {"statusCode": 200, "body": json.dumps(str(result))}
+
         else:
             print("Connection failed")
+            raise Exception("Connection failed")
 
     except Exception as e:
-        print("exception is")
-        print(e)
-
-
-
-    # TODO implement
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Hello from Lambda!')
-    }
+        raise e

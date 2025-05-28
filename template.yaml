@@ -56,6 +56,10 @@ Resources:
       Environment:
         Variables:
           REGION_NAME: !Ref AWS::Region
+          DBNAME: !GetAtt RDSDatabase.DBName
+          ENDPOINT: !GetAtt RDSDatabase.Endpoint.Address
+          SECRET_NAME: !GetAtt SecretManager.Id
+
 
       Events:
         SAMAPI:

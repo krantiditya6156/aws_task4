@@ -40,7 +40,7 @@ Resources:
     Properties:
       Handler: app.lambda_handler
       Runtime: python3.12
-      CodeUri: s3://code-bucket-sam-ap-south-1-123456/12967feb1ff9c1f760a868bdf6b13d30
+      CodeUri: s3://code-bucket-sam-ap-south-1-123456/d6d6e8a6bfc8130cef3531d2d66a098e
       Description: A starter AWS Lambda function.
       MemorySize: 128
       Timeout: 3
@@ -54,6 +54,18 @@ Resources:
         Variables:
           REGION_NAME:
             Ref: AWS::Region
+          DBNAME:
+            Fn::GetAtt:
+            - RDSDatabase
+            - DBName
+          ENDPOINT:
+            Fn::GetAtt:
+            - RDSDatabase
+            - Endpoint.Address
+          SECRET_NAME:
+            Fn::GetAtt:
+            - SecretManager
+            - Id
       Events:
         SAMAPI:
           Type: Api
