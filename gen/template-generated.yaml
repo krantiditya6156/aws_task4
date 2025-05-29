@@ -40,7 +40,7 @@ Resources:
     Properties:
       Handler: app.lambda_handler
       Runtime: python3.12
-      CodeUri: s3://code-bucket-sam-ap-south-1-123456/d6d6e8a6bfc8130cef3531d2d66a098e
+      CodeUri: s3://code-bucket-sam-ap-south-1-123456/e28698362fc670779d2b81fb3634489c
       Description: A starter AWS Lambda function.
       MemorySize: 128
       Timeout: 3
@@ -72,6 +72,32 @@ Resources:
           Properties:
             Path: /details
             Method: GET
+            RestApiId:
+              Ref: API
+            Auth:
+              Authorizer: LambdaTokenAuthorizer
+  API:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        Authorizers:
+          LambdaTokenAuthorizer:
+            FunctionArn:
+              Fn::GetAtt:
+              - LambdaAuthorizer
+              - Arn
+            Identity:
+              Header: auth-token
+  LambdaAuthorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: authorizer.lambda_handler
+      Runtime: python3.12
+      CodeUri: s3://code-bucket-sam-ap-south-1-123456/e28698362fc670779d2b81fb3634489c
+      Description: lambda function for authorization
+      MemorySize: 128
+      Timeout: 3
 Outputs:
   SecretARN:
     Value:

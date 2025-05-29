@@ -60,13 +60,38 @@ Resources:
           ENDPOINT: !GetAtt RDSDatabase.Endpoint.Address
           SECRET_NAME: !GetAtt SecretManager.Id
 
-
       Events:
         SAMAPI:
           Type: Api
           Properties:
             Path: /details
             Method: GET
+            RestApiId: !Ref API
+            Auth:
+              Authorizer: LambdaTokenAuthorizer
+
+  API:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        Authorizers: 
+          LambdaTokenAuthorizer:
+            FunctionArn: !GetAtt LambdaAuthorizer.Arn
+            Identity:
+              Header: auth-token
+    
+  LambdaAuthorizer:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: authorizer.lambda_handler
+      Runtime: python3.12
+      CodeUri: src/
+      Description: lambda function for authorization
+      MemorySize: 128
+      Timeout: 3
+
+
 
     
 
