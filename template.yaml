@@ -75,7 +75,7 @@ Resources:
     Properties:
       StageName: Prod
       Cors:
-        AllowOrigin: "'*'"                                                
+        AllowOrigin: "'http://static-website-hosting-bucket-ap-south-1-394504785337.s3-website.ap-south-1.amazonaws.com'"                                            
         AllowHeaders: "'Content-Type,Authorization,auth-token,customer_id'"
         AllowMethods: "'GET,OPTIONS'"
       Auth:

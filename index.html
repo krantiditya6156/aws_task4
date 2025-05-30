@@ -40,8 +40,8 @@
 
                 })
             .then(data => {
-                let jsondata = JSON.parse(data);
-                document.getElementById("result").innerHTML = `Transactions: ${jsondata[0]}, Total Amount: ${jsondata[1]}`;
+                // let jsondata = JSON.parse(data);
+                document.getElementById("result").innerHTML = `Transactions: ${data.count}, Total Amount: ${data.sum}`;
             })
             .catch(error => {
             console.error("Error:", error);

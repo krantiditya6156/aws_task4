@@ -40,7 +40,7 @@ Resources:
     Properties:
       Handler: app.lambda_handler
       Runtime: python3.12
-      CodeUri: s3://code-bucket-sam-ap-south-1-123456/f7b48b7eb8929ee338cfe325a4bea497
+      CodeUri: s3://code-bucket-sam-ap-south-1-123456/4b42e951ed76b4bf4f25ea37e5e3848c
       Description: A starter AWS Lambda function.
       MemorySize: 128
       Timeout: 3
@@ -81,7 +81,7 @@ Resources:
     Properties:
       StageName: Prod
       Cors:
-        AllowOrigin: "'*'"
+        AllowOrigin: "'http://static-website-hosting-bucket-ap-south-1-394504785337.s3-website.ap-south-1.amazonaws.com'"
         AllowHeaders: "'Content-Type,Authorization,auth-token,customer_id'"
         AllowMethods: "'GET,OPTIONS'"
       Auth:
@@ -98,7 +98,7 @@ Resources:
     Properties:
       Handler: authorizer.lambda_handler
       Runtime: python3.12
-      CodeUri: s3://code-bucket-sam-ap-south-1-123456/f7b48b7eb8929ee338cfe325a4bea497
+      CodeUri: s3://code-bucket-sam-ap-south-1-123456/4b42e951ed76b4bf4f25ea37e5e3848c
       Description: lambda function for authorization
       MemorySize: 128
       Timeout: 3

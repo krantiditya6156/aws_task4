@@ -54,10 +54,19 @@ def lambda_handler(event, context):
             cursor = db.cursor()
             cursor.execute(query)
             result = cursor.fetchall()
+            result = {"count": result[0][0], "sum": float(result[0][1])}
 
             db.close()
 
-            return {"statusCode": 200, "body": json.dumps(str(result))}
+            return {
+                "statusCode": 200,
+                "headers": {
+                    "Access-Control-Allow-Origin": "http://static-website-hosting-bucket-ap-south-1-394504785337.s3-website.ap-south-1.amazonaws.com",
+                    "Access-Control-Allow-Methods": "GET,OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type,Authorization,auth-token,customer_id",
+                },
+                "body": json.dumps(result),
+            }
 
         else:
             print("Connection failed")
