@@ -40,7 +40,7 @@ Resources:
     Properties:
       Handler: app.lambda_handler
       Runtime: python3.12
-      CodeUri: s3://code-bucket-sam-ap-south-1-123456/e28698362fc670779d2b81fb3634489c
+      CodeUri: s3://code-bucket-sam-ap-south-1-123456/f7b48b7eb8929ee338cfe325a4bea497
       Description: A starter AWS Lambda function.
       MemorySize: 128
       Timeout: 3
@@ -80,6 +80,10 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
+      Cors:
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,Authorization,auth-token,customer_id'"
+        AllowMethods: "'GET,OPTIONS'"
       Auth:
         Authorizers:
           LambdaTokenAuthorizer:
@@ -94,11 +98,49 @@ Resources:
     Properties:
       Handler: authorizer.lambda_handler
       Runtime: python3.12
-      CodeUri: s3://code-bucket-sam-ap-south-1-123456/e28698362fc670779d2b81fb3634489c
+      CodeUri: s3://code-bucket-sam-ap-south-1-123456/f7b48b7eb8929ee338cfe325a4bea497
       Description: lambda function for authorization
       MemorySize: 128
       Timeout: 3
+  StaticWebsiteHostingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: static-website-hosting-bucket-${AWS::Region}-${AWS::AccountId}
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: ObjectWriter
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+  StaticWebsiteHostingBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: StaticWebsiteHostingBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Sid: PublicReadForGetBucketObjects
+          Effect: Allow
+          Principal: '*'
+          Action: s3:GetObject
+          Resource:
+            Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - Ref: StaticWebsiteHostingBucket
+              - /*
 Outputs:
   SecretARN:
     Value:
       Ref: SecretManager
+  outputWebsiteURL:
+    Value:
+      Fn::GetAtt:
+      - StaticWebsiteHostingBucket
+      - WebsiteURL
