@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-REGION_NAME="ap-south-1"
+REGION_NAME="ap-northeast-1"
 BUCKET_NAME="code-bucket-sam-${REGION_NAME}-123456"
 STACK_NAME="AppStack2"
 Username="admin"
