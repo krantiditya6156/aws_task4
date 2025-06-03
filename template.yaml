@@ -1,0 +1,290 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Parameters:
+  DBUsername:
+    Type: String
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: 10.0.1.0/24
+      VpcId: !Ref VPC
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: 10.0.2.0/24
+      VpcId: !Ref VPC
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: "ap-northeast-1d"
+      CidrBlock: 10.0.3.0/24
+      VpcId: !Ref VPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc      
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet
+
+  RouteTablePublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+    
+  RoutePublic:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0  
+      GatewayId: !Ref InternetGateway      
+      RouteTableId: !Ref RouteTablePublic
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      SubnetId: !Ref PublicSubnet
+
+  RouteTablePrivate:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  RoutePrivate:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0  
+      NatGatewayId: !Ref NatGateway     
+      RouteTableId: !Ref RouteTablePrivate
+
+  PrivateSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      SubnetId: !Ref PrivateSubnet2
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: secuirty group for lambda
+      VpcId: !Ref VPC
+
+  LambdaSecurityGroupEgressToRDS:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup 
+      IpProtocol: -1
+      DestinationSecurityGroupId: !Ref RDSSecurityGroup
+
+  LambdaSecurityGroupEgressToInternet:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup 
+      IpProtocol: -1
+      CidrIp: 0.0.0.0/0
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: secuirty group for rds
+      VpcId: !Ref VPC
+
+  RDSSecurityGroupInboudRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RDSSecurityGroup 
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: rds-subnet-group
+      DBSubnetGroupDescription: Subnet group for RDS instance
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+  RDSDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: database01
+      AllocatedStorage: 10
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      MasterUsername: !Sub '{{resolve:secretsmanager:${SecretManager}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${SecretManager}:SecretString:password}}'
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup       
+  
+  SecretManager:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: dbcredentials
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username": "${DBUsername}"}'
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
+
+  LambdaLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: mysql-layer
+      Description: Lambda Layer for mysql dependencies
+      ContentUri: s3://code-bucket-sam-ap-northeast-1-123456/mysql-layer.zip 
+      CompatibleRuntimes:
+        - python3.10
+        - python3.11
+        - python3.12
+
+  LambdaFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      CodeUri: src/
+      Description: A starter AWS Lambda function.
+      MemorySize: 128
+      Timeout: 60  
+      Layers: 
+        - !Ref LambdaLayer
+
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref SecretManager
+      
+      VpcConfig:
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
+
+      Environment:
+        Variables:
+          REGION_NAME: !Ref AWS::Region
+          DBNAME: !GetAtt RDSDatabase.DBName
+          ENDPOINT: !GetAtt RDSDatabase.Endpoint.Address
+          SECRET_NAME: !GetAtt SecretManager.Id
+          STATIC_WEBSITE_URL: !GetAtt 
+                                - StaticWebsiteHostingBucket
+                                - WebsiteURL
+
+      Events:
+        SAMAPI:
+          Type: Api
+          Properties:
+            Path: /details
+            Method: GET
+            RestApiId: !Ref API
+            Auth:
+              Authorizer: LambdaTokenAuthorizer
+
+  API:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowOrigin: "'http://static-website-hosting-bucket-ap-northeast-1-394504785337.s3-website-ap-northeast-1.amazonaws.com'"                                            
+        AllowHeaders: "'Content-Type,Authorization,auth-token,customer_id'"
+        AllowMethods: "'GET,OPTIONS'"
+      Auth:
+        Authorizers: 
+          LambdaTokenAuthorizer:
+            FunctionArn: !GetAtt LambdaAuthorizer.Arn
+            Identity:
+              Header: auth-token
+    
+  LambdaAuthorizer:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: authorizer.lambda_handler
+      Runtime: python3.12
+      CodeUri: src/
+      Description: lambda function for authorization
+      MemorySize: 128
+      Timeout: 3
+
+  StaticWebsiteHostingBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub static-website-hosting-bucket-${AWS::Region}-${AWS::AccountId}
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: ObjectWriter
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  StaticWebsiteHostingBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref StaticWebsiteHostingBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Join 
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref StaticWebsiteHostingBucket
+                - /* 
+
+Outputs:
+  SecretARN:
+    Value: !Ref SecretManager
+
+  outputWebsiteURL:
+    Value: !GetAtt 
+      - StaticWebsiteHostingBucket
+      - WebsiteURL
+
+  ApiUrl:
+    Description: "The URL of the API Gateway"
+    Value: !Sub "https://${API}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+
+
+
