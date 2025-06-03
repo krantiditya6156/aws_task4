@@ -1,0 +1,24 @@
+name: CI/CD for sam app
+
+on: 
+    push: 
+        branches: [deploy]
+    workflow_dispatch: 
+
+permissions:
+    contents: write
+
+jobs:
+    build_and_deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Install dependencies
+              run: ./dependency.sh
+
+            - name: Build Project
+              run: ./commands.sh
+
