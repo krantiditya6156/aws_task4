@@ -25,12 +25,12 @@ jobs:
                 aws-region: ap-northeast-1
 
             - name: Install dependencies
-              run: 
+              run: |
                 chmod +x dependency.sh
                 ./dependency.sh
 
             - name: Build Project
-              run: 
+              run: |
                 chmod +x commands.sh
                 ./commands.sh
 
