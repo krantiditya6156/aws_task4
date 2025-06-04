@@ -183,7 +183,7 @@ Resources:
     Properties:
       Handler: app.lambda_handler
       Runtime: python3.12
-      CodeUri: s3://code-bucket-sam-ap-northeast-1-123456/969ab7d60a9e86173c7c8a4f0c95ff5d
+      CodeUri: s3://code-bucket-sam-ap-northeast-1-123456/98a4b0d475a0d72c745ee01fc895de14
       Description: A starter AWS Lambda function.
       MemorySize: 128
       Timeout: 60
@@ -251,7 +251,7 @@ Resources:
     Properties:
       Handler: authorizer.lambda_handler
       Runtime: python3.12
-      CodeUri: s3://code-bucket-sam-ap-northeast-1-123456/969ab7d60a9e86173c7c8a4f0c95ff5d
+      CodeUri: s3://code-bucket-sam-ap-northeast-1-123456/98a4b0d475a0d72c745ee01fc895de14
       Description: lambda function for authorization
       MemorySize: 128
       Timeout: 3
