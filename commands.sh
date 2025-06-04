@@ -14,6 +14,8 @@ else
     echo "Bucket ${BUCKET_NAME} already exists."
 fi
 
+aws s3 cp /mysql-layer/mysql-layer.zip s3://${BUCKET_NAME} --recursive
+
 aws cloudformation package --s3-bucket ${BUCKET_NAME} \
     --template-file template.yaml \
     --output-template-file gen/template-generated.yaml
