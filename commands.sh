@@ -14,6 +14,8 @@ else
     echo "Bucket ${BUCKET_NAME} already exists."
 fi
 
+pwd
+ls -l
 aws s3 cp ./mysql-layer/mysql-layer.zip s3://${BUCKET_NAME}
 
 aws cloudformation package --s3-bucket ${BUCKET_NAME} \
