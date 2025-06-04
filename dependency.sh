@@ -3,8 +3,6 @@ cd mysql-layer
 mkdir python
 
 pip install mysql-connector-python -t python/
-zip -r my-sql-layer.zip python/
-pwd
-ls -l
+zip -r mysql-layer.zip python/
 cd ..
 
