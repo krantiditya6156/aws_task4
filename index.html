@@ -1,0 +1,56 @@
+<html>
+
+<head>
+    <title>Customer Info</title>
+</head>
+
+<body>
+    <h2>Enter Customer Details</h2>
+
+    <form onsubmit="event.preventDefault(); getDetails();">
+        <label>Customer ID</label><br>
+        <input type="text" id="customerId"><br>
+
+        <label>Auth token</label><br>
+        <input type="text" id="authToken"><br>
+
+        <input type="submit" value="Submit">
+    </form>
+
+    <p id="result"></p>
+
+    <script>
+        function getDetails() {
+            let customerId = document.getElementById("customerId").value;
+            let authToken = document.getElementById("authToken").value;
+                
+            fetch('https://eal0t9cn4h.execute-api.ap-northeast-1.amazonaws.com/Prod/details', {
+                method: 'GET',
+                mode: "cors",
+                headers: {
+                    "auth-token": authToken,
+                    "customer_id": customerId
+                }
+            })
+            .then(
+                response => {
+                    console.log("API Response:", response);
+                    return response.json()
+
+
+                })
+            .then(data => {
+                // let jsondata = JSON.parse(data);
+                document.getElementById("result").innerHTML = `Transactions: ${data.count}, Total Amount: ${data.sum}`;
+            })
+            .catch(error => {
+            console.error("Error:", error);
+            document.getElementById("result").innerHTML = "Failed to fetch data!";
+        
+        });
+        }
+    </script>
+
+</body>
+
+</html>
